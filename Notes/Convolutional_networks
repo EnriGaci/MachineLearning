@@ -1,0 +1,107 @@
+FaceNet learns a neural network that encodes a face image into a vector of 128 numbers
+By comparing two such vectors, you can then determine if two pictures are of the same person
+
+This network uses 96x96 dimensional RGB images as its input. Specifically, inputs a face image (or batch of mm face images) as a tensor of shape  (m,nC,nH,nW)=(m,3,96,96)
+
+this means 
+m = batch size or input size
+nC = 3 ( 1 for each RGB)
+nH = 96 Height of the image 
+nW = 96 Width of the image
+
+import tensorflow as tf
+import numpy as np
+import os
+from numpy import genfromtxt
+from keras import backend as K
+from keras.layers import Conv2D, ZeroPadding2D, Activation, Input, concatenate
+from keras.models import Model
+from keras.layers.normalization import BatchNormalization
+from keras.layers.pooling import MaxPooling2D, AveragePooling2D
+import fr_utils
+from keras.layers.core import Lambda, Flatten, Dense
+
+def faceRecoModel(input_shape):
+    """
+    Implementation of the Inception model used for FaceNet
+    
+    Arguments:
+    input_shape -- shape of the images of the dataset
+
+    Returns:
+    model -- a Model() instance in Keras
+    """
+        
+    # Define the input as a tensor with shape input_shape
+    X_input = Input(input_shape)
+
+    # Zero-Padding
+    X = ZeroPadding2D((3, 3))(X_input)
+    
+    # First Block
+    X = Conv2D(64, (7, 7), strides = (2, 2), name = 'conv1')(X)
+    X = BatchNormalization(axis = 1, name = 'bn1')(X)
+    X = Activation('relu')(X)
+    
+    # Zero-Padding + MAXPOOL
+    X = ZeroPadding2D((1, 1))(X)
+    X = MaxPooling2D((3, 3), strides = 2)(X)
+    
+    # Second Block
+    X = Conv2D(64, (1, 1), strides = (1, 1), name = 'conv2')(X)
+    X = BatchNormalization(axis = 1, epsilon=0.00001, name = 'bn2')(X)
+    X = Activation('relu')(X)
+    
+    # Zero-Padding + MAXPOOL
+    X = ZeroPadding2D((1, 1))(X)
+
+    # Second Block
+    X = Conv2D(192, (3, 3), strides = (1, 1), name = 'conv3')(X)
+    X = BatchNormalization(axis = 1, epsilon=0.00001, name = 'bn3')(X)
+    X = Activation('relu')(X)
+    
+    # Zero-Padding + MAXPOOL
+    X = ZeroPadding2D((1, 1))(X)
+    X = MaxPooling2D(pool_size = 3, strides = 2)(X)
+    
+    # Inception 1: a/b/c
+    X = inception_block_1a(X)
+    X = inception_block_1b(X)
+    X = inception_block_1c(X)
+    
+    # Inception 2: a/b
+    X = inception_block_2a(X)
+    X = inception_block_2b(X)
+    
+    # Inception 3: a/b
+    X = inception_block_3a(X)
+    X = inception_block_3b(X)
+    
+    # Top layer
+    X = AveragePooling2D(pool_size=(3, 3), strides=(1, 1), data_format='channels_first')(X)
+    X = Flatten()(X)
+    X = Dense(128, name='dense_layer')(X)
+    
+    # L2 normalization
+    X = Lambda(lambda  x: K.l2_normalize(x,axis=1))(X)
+
+    # Create model instance
+    model = Model(inputs = X_input, outputs = X, name='FaceRecoModel')
+        
+    return model
+
+In my digit recognition assignment I will compare these two vectors to determine if they are the same numbers
+
+784 = 28*28 pixels in each image
+[28,277,8,25.....] -> Scale of each pixel lightness
+
+m = batch size or input size
+nC = 2 (greyscale)
+nH = 28
+nW = 28
+
+We may need normilization (255 in pixel lightness and darkness)
+
+I want to implement this step : encoding = img_to_encoding(image_path, model)
+
+first I need to make the model
