@@ -22,14 +22,11 @@ test = pd.read_csv('/home/egaci/workspace/Machine_Learning/MachineLearning/Digit
 
 # Retrieve the actual numbers stored in the label column
 Y_train_orig = np.array(train['label'][:]).reshape((1, train['label'].shape[0]))
-Y_test_orig = np.array(test['label'][:]).reshape((1, test['label'].shape[0]))
 # Store the pixels of each image without the label column
 X_train = np.array(train.T[1:].T)
 
 # Store the pixels of each image without the label column
-X_test = np.array(test.T[1:].T)
-Y_test = np.eye(10)[Y_train_orig[0]]
-
+X_test = np.array(test.T[0:].T)
 
 # Transform the input labels to (1,10) arrays with 1 in the place the number is
 # i.e if the number is 2 then Y[position_containin_num_2] = [0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
@@ -303,7 +300,21 @@ model.compile(optimizer = "adam", loss = "binary_crossentropy", metrics = ["accu
 model.fit(x = X_train.reshape((42000, 1,28,28)), y = Y_train, epochs = 5, batch_size = 14)
 
 # Prediction phase
-preds = model.evaluate(x = X_test, y = Y_test)
+preds = model.predict(x = X_test.reshape(28000,1,28,28))
+y_preds = np.argmax(preds, axis=1)
+
+result = []
+print("ImageId,Label")
+for i in range(0,y_preds.size):
+	result.append(i)
+	result.append(y_preds[i])
+	# print( str(i) + "," + str(y_preds[i]))
+
+
+a = np.array(result).reshape(28000,2)
+np.savetxt("foo.csv", a, delimiter=",")
+
+print(str(3)+","+str(y_preds[3]))
 print()
 print ("Loss = " + str(preds[0]))
 print ("Test Accuracy = " + str(preds[1]))
