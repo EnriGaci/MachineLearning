@@ -17,16 +17,19 @@ from keras.layers.normalization import BatchNormalization
 from keras.layers.pooling import MaxPooling2D, AveragePooling2D
 from keras.layers.core import Lambda, Flatten, Dense
 
-train = pd.read_csv('C:\\Users\\henry\\Machine_Learning\\MachineLearning\\Digit_Recognition\\input\\train.csv')
-test = pd.read_csv('C:\\Users\\henry\\Machine_Learning\\MachineLearning\\Digit_Recognition\\input\\test.csv')
+train = pd.read_csv('/home/egaci/workspace/Machine_Learning/MachineLearning/Digit_Recognition/input/train.csv')
+test = pd.read_csv('/home/egaci/workspace/Machine_Learning/MachineLearning/Digit_Recognition/input/test.csv')
 
 # Retrieve the actual numbers stored in the label column
 Y_train_orig = np.array(train['label'][:]).reshape((1, train['label'].shape[0]))
+Y_test_orig = np.array(test['label'][:]).reshape((1, test['label'].shape[0]))
 # Store the pixels of each image without the label column
 X_train = np.array(train.T[1:].T)
 
 # Store the pixels of each image without the label column
 X_test = np.array(test.T[1:].T)
+Y_test = np.eye(10)[Y_train_orig[0]]
+
 
 # Transform the input labels to (1,10) arrays with 1 in the place the number is
 # i.e if the number is 2 then Y[position_containin_num_2] = [0. 0. 1. 0. 0. 0. 0. 0. 0. 0.]
@@ -273,19 +276,19 @@ def faceRecoModel(input_shape):
 	X = ZeroPadding2D((1, 1))(X)
 	X = MaxPooling2D(pool_size = 3, strides = 2)(X)
 	# Inception 1: a/b/c
-	X = inception_block_1a(X)
-	X = inception_block_1b(X)
-	X = inception_block_1c(X)
-	# Inception 2: a/b
-	X = inception_block_2a(X)
-	X = inception_block_2b(X)
-	# Inception 3: a/b
-	X = inception_block_3a(X)
-	X = inception_block_3b(X)
+	# X = inception_block_1a(X)
+	# X = inception_block_1b(X)
+	# X = inception_block_1c(X)
+	# # Inception 2: a/b
+	# X = inception_block_2a(X)
+	# X = inception_block_2b(X)
+	# # Inception 3: a/b
+	# X = inception_block_3a(X)
+	# X = inception_block_3b(X)
 	# Top layer
 	X = AveragePooling2D(pool_size=(3, 3), strides=(1, 1), data_format='channels_first')(X)
 	X = Flatten()(X)
-	X = Dense(128, name='dense_layer')(X)
+	X = Dense(10, name='dense_layer')(X)
 	# L2 normalization
 	X = Lambda(lambda  x: K.l2_normalize(x,axis=1))(X)
 	# Create model instance
@@ -295,3 +298,12 @@ def faceRecoModel(input_shape):
 
 model = faceRecoModel(input_shape=(1,28,28))
 
+
+model.compile(optimizer = "adam", loss = "binary_crossentropy", metrics = ["accuracy"])
+model.fit(x = X_train.reshape((42000, 1,28,28)), y = Y_train, epochs = 5, batch_size = 14)
+
+# Prediction phase
+preds = model.evaluate(x = X_test, y = Y_test)
+print()
+print ("Loss = " + str(preds[0]))
+print ("Test Accuracy = " + str(preds[1]))
